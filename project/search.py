@@ -67,27 +67,32 @@ def process_search():
 
 # Eliminate empty input and ensure valid conditions
 def check_input(conditions):
-	new_conditions = {}
-	for item in conditions:
-		if conditions[str(item)][0] != '' or conditions[str(item)][1] != '':
-			new_conditions[item.upper()] = {}
-		if conditions[str(item)][0] != '':
-			try:
-				#print(str(item), 'conditions[str(item)][0]', conditions[str(item)][0])
-				new_conditions[item.upper()]['$gte'] = float(conditions[str(item)][0])
-			except:
-				print str(item)
-				bottle.redirect("/")
-		if conditions[str(item)][1] != '':
-			try:				
-				#print('conditions[str(item)][1]', conditions[str(item)][1])
-				new_conditions[item.upper()]['$lte'] = float(conditions[str(item)][1])
-			except:
-				print str(item)
-				bottle.redirect("/")
+    new_conditions = {}
+    for item in conditions:
+        if conditions[str(item)][0] != '' or conditions[str(item)][1] != '':
+            new_conditions[item.upper()] = {}
+        if conditions[str(item)][0] != '':
+            try:
+                #print(str(item), 'conditions[str(item)][0]', conditions[str(item)][0])
+                new_conditions[item.upper()]['$gte'] = float(conditions[str(item)][0])
+                if str(item) == 'tmin' or str(item) == 'tmax':
+                    new_conditions[item.upper()]['$gte'] = float(conditions[str(item)][0])*10
+            except:
+                print str(item)
+                bottle.redirect("/")
+        if conditions[str(item)][1] != '':
+            try:                
+                #print('conditions[str(item)][1]', conditions[str(item)][1])
+                new_conditions[item.upper()]['$lte'] = float(conditions[str(item)][1])
+                if str(item) == 'tmin' or str(item) == 'tmax':
+                    new_conditions[item.upper()]['$lte'] = float(conditions[str(item)][1])*10
+            except:
+                print str(item)
+                bottle.redirect("/")
 
-	pprint.pprint(new_conditions)
-	return new_conditions
+    pprint.pprint(new_conditions)
+    return new_conditions
+
 
 # get the range of latitude and longitude by a given point and a distance range
 def getRange(lat , lon , distance):
