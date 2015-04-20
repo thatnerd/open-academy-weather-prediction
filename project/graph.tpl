@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<head>
+    <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style type="text/css">
-        #allmap {width: 100%;height: 500px;margin:0;font-family:"微软雅黑";}
-    </style>
-    <script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=6l5K2xmDZK0HrYEaIp6ujXtp"></script>
-    <title>Find places with condition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Xenon Boostrap Admin Panel" />
+    <meta name="author" content="" />
+    
+    <title>Graph</title>
+
     <link rel="stylesheet" href="http://fonts.useso.com/css?family=Arimo:400,700,400italic">
     <link rel="stylesheet" href="assets/css/fonts/linecons/css/linecons.css">
     <link rel="stylesheet" href="assets/css/fonts/fontawesome/css/font-awesome.min.css">
@@ -21,9 +21,71 @@
 
 
     <script src="assets/js/jquery-1.11.1.min.js"></script>
-</head>
+   	<script type="text/javascript" src="jquery.js"></script>
+    <script type="text/javascript" src="jquery.flot.js"></script>
+    <script>
+    var options = {
+            series: {
+                lines: {
+                    show: true
+                },
+                points: {
+                    radius: 3,
+                    fill: true,
+                    show: true
+                }
+            },
+            yaxes: [{
+                axisLabel: "Gold Price(USD)",
+                axisLabelUseCanvas: true,
+                axisLabelFontSizePixels: 12,
+                axisLabelFontFamily: 'Verdana, Arial',
+                axisLabelPadding: 3,
 
-<body class="page-body" onload = "draw_point();">
+            }, {
+                position: "right",
+                axisLabel: "Change(%)",
+                axisLabelUseCanvas: true,
+                axisLabelFontSizePixels: 12,
+                axisLabelFontFamily: 'Verdana, Arial',
+                axisLabelPadding: 3
+            }
+          ],
+            legend: {
+                noColumns: 0,
+                labelBoxBorderColor: "#000000",
+                position: "nw"
+            },
+            grid: {
+                hoverable: true,
+                borderWidth: 2,
+                borderColor: "#633200",
+                backgroundColor: { colors: ["#ffffff", "#EDF5FF"] }
+            },
+            colors: ["#FF0000", "#0022FF"]
+        };
+ 
+ 
+    $(function() {
+        $.getJSON("/fetch",function(data){
+            $(document).ready(function() {
+                  $.plot($("#graphholder"), data, options);
+            });
+        });
+    });
+
+    jQuery(document).ready(function($)
+    {   
+        // Resize charts
+        $(window).on('xenon.resize', function()
+        {
+            $("#map").render();
+        });
+    });
+    </script>
+
+</head>
+<body class="page-body">
     <div class="settings-pane">
             
         <a href="#" data-toggle="settings-pane" data-animate="true">
@@ -421,62 +483,71 @@
                     %end
                 </ul>
                 
-            </nav>
-
-            <script type="text/javascript">
-
-                jQuery(document).ready(function($)
-                {   
-                    // Resize charts
-                    $(window).on('xenon.resize', function()
-                    {
-                        $("#allmap").render();
-                    });
-                });
-            </script>
-            
-        <div id = "allmap"></div>
-
-        <div>
-            <form method="post">
-                <input class="btn btn-success" type="submit" value="back"><br>
-            </form>
-            
-            <label class="lead"><center>Items that meet the requirements</center></label>
+            </nav> 
+        
+        <div  align="center">
+            <div id="graphholder" style="width:600px;height:300px"></div>
+            <br><br><br>
+            <div id="parameters"></div>
         </div>
-        <div>    
-        <table style="width:100%">
+
+        <form method='post'>
+        <div class="row">
+            <div class="col-sm-4">
+            Place One: 
+            <select class="form-control" name="place_name1"> 
+            <table>
+                %for option in PlaceOptions:
+                <tr>
+                <option>{{option}}</option>
+                </tr>
+                %end
+            </table>
+            </select>
+            <br>
+
+            Start Data<input class="form-control" type="text" name="start_date1" value="20150106"/><br>
+            End Data<input class="form-control" type="text" name="end_date1" value="20150120"/>
+            </div>
+
+            <div class="col-sm-4">
+            Place Two: 
+            <select class="form-control" name="place_name2"> 
+            <table>
+            %for option in PlaceOptions:
             <tr>
-            <td>STATION</td>
-            <td>STATION_NAME</td> 
-            <td>ELEVATION</td>
-            <td>LATITUDE</td>
-            <td>LONGITUDE</td>
-            <td>DATE</td>
-            <td>PRCP</td>
-            <td>SNWD</td>
-            <td>TMAX</td>
-            <td>TMIN</td>
-        </tr>
-        %for item in Items:
-        <tr>
-            <td> {{item['STATION']}} </td>
-            <td> {{item['STATION_NAME']}} </td>
-            <td> {{item['ELEVATION']}} </td>
-            <td> {{item['LATITUDE']}} </td>
-            <td> {{item['LONGITUDE']}} </td>
-            <td> {{item['DATE']}} </td>
-            <td> {{item['PRCP']}} </td>
-            <td> {{item['SNWD']}}</td>
-            <td> {{float(item['TMAX'])}}</td>
-            <td> {{float(item['TMIN'])/10}}</td>
-        </tr>
-        %end
-        </table>
-        </div>
+                <option>{{option}}</option>
+            </tr>
+            %end
+            </table>
+            </select>
+            <br>
+            Start Data<input class="form-control" type="text" name="start_date2" value="20150106"/><br>
+            End Data<input class="form-control" type="text" name="end_date2" value="20150120"/><br>
+            </div>
 
-            
-            <!-- Main Footer -->
+            <div class="col-sm-2">
+            Data Type<br>
+            <div class="row">
+                <div class="col-sm-5">
+                <input class="form-control" type="radio" name="data_type" value="TMAX" checked="true"/>TMAX
+                <input class="form-control" type="radio" name="data_type" value="TMIN"/>TMIN
+                </div>
+                <div class="col-sm-5">
+                    <input class="form-control" type="radio" name="data_type" value="PRCP"/>PRCP
+                    <input class="form-control" type="radio" name="data_type" value="SNWD"/>SNWD
+                </div>
+            </div>
+            </div>
+
+            <div class="col-sm-2">
+                <br><br><br><br><br>
+                <input class="form-control" type='submit' value='Analyse'>
+            </div>
+        </div>
+        </form>
+
+                    <!-- Main Footer -->
             <footer class="main-footer sticky footer-type-1">
                 
                 <div class="footer-inner">
@@ -527,9 +598,6 @@
     <div class="page-loading-overlay">
         <div class="loader-2"></div>
     </div>
-    
-
-
 
     <!-- Bottom Scripts -->
     <script src="assets/js/bootstrap.min.js"></script>
@@ -550,43 +618,5 @@
     <!-- JavaScripts initializations and stuff -->
     <script src="assets/js/xenon-custom.js"></script>
 
-
-<script type="text/javascript">
-    // Baidu map API
-    var map = new BMap.Map("allmap");    // Create map instance
-    map.centerAndZoom(new BMap.Point(105.434, 37), 5); 
-    map.addControl(new BMap.MapTypeControl());
-    map.enableScrollWheelZoom(true);
-    it = JSON.parse({"Items":Items})
-
-    function draw_point(){
-        var $this = $(this);
-        $.getJSON("/search2",function(data){
-            $.each(data,function(index,temp){
-                var content = "<h4 style='margin:0 0 5px 0;padding:0.2em 0;'>"+temp['STATION_NAME']+"</h4>" + "</div>";
-                var infowindow = new BMap.InfoWindow(content,{enableMessage:false});
-                infowindow.enableMessage = false;
-                var point = new BMap.Point(parseFloat(temp['LONGITUDE']),parseFloat(temp['LATITUDE']));
-                var marker = new BMap.Marker(point);
-                map.addOverlay(marker);
-                marker.addEventListener("click",function(){
-                    this.openInfoWindow(infowindow);
-                });
-            });
-        });
-    }
-
-    function draw_points()
-    {
-        alert(it.Items)
-        for(var i = 0; i < Items.length; i++)
-        {
-            var point = new BMap.Point(Items[i]['LONGITUDE'],Items[i]['LATITUDE']);
-            var marker = new BMap.Marker(point);
-            map.addOverlay(marker);
-        }
-        map.centerAndZoom(point,7);
-    }
-</script>
-</body>
+    </body>
 </html>

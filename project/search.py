@@ -5,6 +5,7 @@
 import pymongo
 from pymongo import MongoClient
 import bottle
+from bottle import *
 import pprint
 import copy
 import math
@@ -16,9 +17,15 @@ collection = db.condition
 
 conditions = {}
 
-# Initialize the home page
-@bottle.route('/')
-def make_home_page():
+user_info = [False,"None"]
+
+@bottle.route('/assets/<filepath:path>')
+def server_static(filepath):
+    return static_file(filepath, root='./assets/')
+
+# Initialize the search page
+@bottle.route('/conditional_search.html')
+def conditional_search_page():
     global conditions
     Places = collection.distinct('STATION_NAME')
     PlaceOptions = []
@@ -28,7 +35,7 @@ def make_home_page():
         row['city'] = item
         row['lon_and_lat'] = str(temp_lat_and_lon[0]) + "," + str(temp_lat_and_lon[1])
         PlaceOptions.append(copy.copy(row))
-    return bottle.template('home_page', {'PlaceOptions': PlaceOptions})
+    return bottle.template('conditional_search', {'PlaceOptions': PlaceOptions,'user_info': user_info})
 
 def getLAT_AND_LON(city):
     
@@ -43,7 +50,7 @@ def getLAT_AND_LON(city):
 
 # Called after user press the button
 # Get the given conditions from text boxes in the homepage
-@bottle.post('/')
+@bottle.post('/conditional_search.html')
 def process_search():
     global conditions
     conditions.clear()
@@ -52,7 +59,9 @@ def process_search():
     conditions['snwd'] = (bottle.request.forms.get('minsnwd'),bottle.request.forms.get('maxsnwd'))
     conditions['tmax'] = (bottle.request.forms.get('mintmax'),bottle.request.forms.get('maxtmax'))
     conditions['tmin'] = (bottle.request.forms.get('mintmin'),bottle.request.forms.get('maxtmin'))
-    
+
+
+
     # Determine the specific station_name
     lat_and_lon = bottle.request.forms.get('station_name').split(",",1)
     if bottle.request.forms.get('distance') != "":
@@ -75,21 +84,16 @@ def check_input(conditions):
             try:
                 #print(str(item), 'conditions[str(item)][0]', conditions[str(item)][0])
                 new_conditions[item.upper()]['$gte'] = float(conditions[str(item)][0])
-                if str(item) == 'tmin' or str(item) == 'tmax':
-                    new_conditions[item.upper()]['$gte'] = float(conditions[str(item)][0])*10
             except:
                 print str(item)
                 bottle.redirect("/")
         if conditions[str(item)][1] != '':
-            try:                
+            try:
                 #print('conditions[str(item)][1]', conditions[str(item)][1])
                 new_conditions[item.upper()]['$lte'] = float(conditions[str(item)][1])
-                if str(item) == 'tmin' or str(item) == 'tmax':
-                    new_conditions[item.upper()]['$lte'] = float(conditions[str(item)][1])*10
             except:
                 print str(item)
                 bottle.redirect("/")
-
     pprint.pprint(new_conditions)
     return new_conditions
 
@@ -128,7 +132,7 @@ def getRange(lat , lon , distance):
 @bottle.route('/search')
 def show_result():
 	global conditions
-	return bottle.template('result', {"Items": search_in_db()})
+	return bottle.template('result', {"Items": search_in_db(),'user_info': user_info})
 
 # Use the given conditions to search in the database
 def search_in_db():
@@ -138,19 +142,143 @@ def search_in_db():
 
 @bottle.post('/search')
 def go_back():
-	bottle.redirect('/')
+	bottle.redirect('/conditional_search.html')
 
 @bottle.route('/search2')
 def draw_point():
-    result = search_in_db()
-    a=[]
-    for item in result:
-        d = {}
-        for k,v in item.iteritems():
-            if(k != "_id"):
-                d[k]=v;
-        a.append(d)
-    return json.dumps(a)
+    source = search_in_db()
+    station = []
+    target = []
+    for item in source:
+        temp = {}
+        if item['STATION_NAME'] not in station:
+            for k,v in item.iteritems():
+                if(k!="_id"):
+                    temp[k]=v
+            target.append(temp)
+            station.append(item['STATION_NAME'])
+    return json.dumps(target)
+
+@bottle.route('/')
+@bottle.view('index')
+def index():
+    return dict(user_info = user_info)
+
+@bottle.post('/login')
+@bottle.view('index')
+def login():
+    username = request.forms.get('username')
+    password = request.forms.get('password')
+    if username == 'xzhflying' and password == '930619':
+        user_info[0] = True
+        user_info[1] = 'Xu Zihuan'
+    return dict(user_info = user_info)
+
+
+##################  graph   #####################
+conditions1 = {}
+conditions2 = {}
+
+@bottle.route('/<filename>')
+def server_static(filename):
+    return bottle.static_file(filename, root='');
+
+@bottle.route('/graph')
+def do_search():
+    PlaceOptions = db.condition.distinct('STATION_NAME')
+    return bottle.template('graph', {'PlaceOptions': PlaceOptions,'user_info': user_info})
+
+@bottle.post('/graph')
+def go_to_result():
+    PlaceOptions = db.condition.distinct('STATION_NAME')
+        
+    conditions1['place_name'] = bottle.request.forms.get('place_name1')
+    conditions1['start_date'] = bottle.request.forms.get('start_date1')
+    conditions1['end_date'] = bottle.request.forms.get('end_date1')
+    conditions1['data_type'] = bottle.request.forms.get('data_type')
+    conditions2['place_name'] = bottle.request.forms.get('place_name2')
+    conditions2['start_date'] = bottle.request.forms.get('start_date2')
+    conditions2['end_date'] = bottle.request.forms.get('end_date2')
+    conditions2['data_type'] = bottle.request.forms.get('data_type')
+        
+    print conditions1
+    print conditions2
+        
+    return bottle.template('graph', {'PlaceOptions': PlaceOptions,'user_info': user_info})
+
+@bottle.route('/fetch')
+def fetch():
+    
+    return json.dumps(search_graph())
+
+
+# search data in the database according to the given conditions
+def search_graph():
+    parameters = []
+    print "search in db"
+    search_strategy1 = {}
+    search_strategy2 = {}
+    results1 = []
+    results2 = []
+    print "conditions:"
+    print conditions1
+    print conditions2
+    print "conditions over"
+    if len(conditions1) != 0:
+        search_strategy1['STATION_NAME'] = conditions1['place_name']
+        search_strategy1['DATE'] = {}
+        search_strategy1['DATE']['$gte'] = int(conditions1['start_date'])
+        search_strategy1['DATE']['$lte'] = int(conditions1['end_date'])
+        try:
+            print "this is strategy"
+            print search_strategy1
+            results1 =  collection.find(search_strategy1)
+            print results1
+        except:
+            print("Search Error")
+    if  len(conditions2) != 0:
+        search_strategy2['STATION_NAME'] = conditions2['place_name']
+        search_strategy2['DATE'] = {}
+        search_strategy2['DATE']['$gte'] = int(conditions2['start_date'])
+        search_strategy2['DATE']['$lte'] = int(conditions2['end_date'])
+        try:
+            print search_strategy2
+            results2 = collection.find(search_strategy2)
+        except:
+            print("Search Error")
+    placeOne = {}
+    placeOne['label'] = conditions1['place_name']
+    placeOne['data'] = construct_parameters(results1,1)
+    placeTwo = {}
+    placeTwo['label'] = conditions2['place_name']
+    placeTwo['data'] = construct_parameters(results2,2)
+    parameters.append(placeOne)
+    parameters.append(placeTwo)
+    return parameters
+
+
+# Construct the line for one data set
+def construct_parameters(results, num):
+    parameters_for_one = []
+    
+    for i in results:
+        temp = []
+        temp.append(i['DATE'])
+        if num ==1:
+            if (i[conditions1['data_type']]!=-9999):
+                if conditions1['data_type'] in ['TMAX', 'TMIN']:
+                    i[conditions1['data_type']] = i[conditions1['data_type']] / 10
+                    temp.append(i[conditions1['data_type']])
+
+        elif num ==2:
+            if (i[conditions2['data_type']]!=-9999):
+                if conditions2['data_type'] in ['TMAX', 'TMIN']:
+                    i[conditions2['data_type']] = i[conditions2['data_type']] / 10
+                temp.append(i[conditions2['data_type']])
+
+        parameters_for_one.append(temp)      
+
+    return parameters_for_one
 
 
 bottle.debug(True)
